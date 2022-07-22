@@ -20,15 +20,16 @@ const upload = multer({ storage: storage })
 
 async function sendOTP(data) {
 
-    const otp = otpGenerator.generate(6, { alphabets: false, upperCase: false, specialChars: false });
-
+    const otp = otpGenerator.generate(6, {digits : true, upperCaseAlphabets : false, lowerCaseAlphabets : false, specialChars: false });
+    
+    console.log(otp)
+    console.log("otp")
     //Create OTP instance in DB
     const otp_instance = await OTPModel.create({
       otp: hashSync(otp, 10),
       mobile: data.mobile,
       user:data.user
     });
-    console.log(otp_instance)
 
 
     // var params = {
@@ -54,7 +55,28 @@ async function sendOTP(data) {
 
 }
 
+route.get('/wallet', jwtauth,async function (req, res) {
+    if (!res.headersSent) {
+        const w=await wallet.findOne({user:req.user});
+        if(w){
+            res.send(200, { WalletCreated:true, success: true, data: w })
+        }else{
+            res.send(200, { WalletCreated:false })
+        }
+    }
+});
 
+route.get('/wallet/otp/resend', jwtauth,async function (req, res) {
+    if (!res.headersSent) {
+        const w=await wallet.findOne({user:req.user});
+        if(w){
+            sendOTP(w);
+            res.send(200, { success: true, message:"OTP sended successfully!" })
+        }else{
+            res.send(403, { message:"user is not registed for wallet!" })
+        }
+    }
+});
 
 route.post('/wallet/create', jwtauth, upload.single('KYCdoc'), function (req, res) {
     if (!res.headersSent) {
@@ -114,13 +136,23 @@ route.put('/wallet/verify/:id', jwtauth, adminAuth, async function (req, res) {
     }
 });
 
-sendOTP({mobile:"11111",otp:"1111"})
+
 
 route.post('/wallet/otpverify',jwtauth, async function(req,res){
     if(!res.headersSent){
         const otp=await OTPModel.findOne({user:req.user});
         if(otp){
-
+            if(compareSync(req.body.otp,otp.otp)){
+                wallet.findOneAndUpdate({ user: req.user }, { isActive: true }).then(response => {
+                    console.log(response);
+                    res.send(200, { success: true, data: response, message: "wallet successfully verified!" })
+                }).catch(err=>{
+                    console.log(err);
+                    res.send(500, { success: false, message: err.message })
+                }) 
+            }else{
+                res.send(200,{success:false,message:"please enter valid otp!"})
+            }
         }else{
             res.send(200,{success:false,message:"OTP has been expired!"})
         }

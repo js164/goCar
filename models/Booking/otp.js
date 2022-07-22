@@ -19,6 +19,6 @@ const OTPModel= new mongoose.Schema({
     }
 })
 
-OTPModel.index({ expireAfterSeconds: 60 });
+OTPModel.index({ expireAfterSeconds: 20 });
 
 module.exports=mongoose.model('OTPModel',OTPModel)
