@@ -6,6 +6,9 @@ const { adminAuth, jwtauth } = require('../../AuthMiddlewere')
 const multer = require('multer')
 var otpGenerator = require('otp-generator');
 const { hashSync , compareSync} = require('bcrypt')
+const User=require('../../models/Auth/user')
+const path = require('path');
+const fs = require('fs');
 // var AWS = require('aws-sdk');
 
 const storage = multer.diskStorage({
@@ -24,13 +27,23 @@ async function sendOTP(data) {
     
     console.log(otp)
     console.log("otp")
-    //Create OTP instance in DB
+   
+    
+    const otpUSER=await OTPModel.findOne({user:data.user});
+        if(otpUSER){
+            OTPModel.findOneAndUpdate({ user: data.user }, { otp: hashSync(otp, 10) }).then(response => {
+                console.log(response);
+            }).catch(err=>{
+                console.log(err);
+            }) 
+        }else{
+            //Create OTP instance in DB
     const otp_instance = await OTPModel.create({
-      otp: hashSync(otp, 10),
-      mobile: data.mobile,
-      user:data.user
-    });
-
+        otp: hashSync(otp, 10),
+        mobile: data.mobile,
+        user:data.user
+      });
+        }
 
     // var params = {
     //     Message: req.query.message,
@@ -57,11 +70,27 @@ async function sendOTP(data) {
 
 route.get('/wallet', jwtauth,async function (req, res) {
     if (!res.headersSent) {
-        const w=await wallet.findOne({user:req.user});
+        let w=await wallet.findOne({user:req.user}).lean();
         if(w){
-            res.send(200, { WalletCreated:true, success: true, data: w })
+            const u=await User.findById(w.user);
+            w['username']=u.username;
+            if(w.KYCdoc){
+                w.KYCdoc=fs.readFileSync(path.join(__dirname,'..','..', '/docs/' + w.KYCdoc.filename),{encoding: 'base64'})
+            }
+                res.send(200, { WalletCreated:true, success: true, data: w })
         }else{
             res.send(200, { WalletCreated:false })
+        }
+    }
+});
+
+route.get('/walletRequest', jwtauth,async function (req, res) {
+    if (!res.headersSent) {
+        const w=await wallet.find({isActive:true,isAdminVerified:false});
+        if(w){
+            res.send(200, { success: true, data: w })
+        }else{
+            res.send(200, { success:false })
         }
     }
 });
