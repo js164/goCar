@@ -35,6 +35,13 @@ const wallet= new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    isRejected:{
+        type:Boolean,
+        default:false
+    },
+    rejectNote:{
+        type:String,
+    },
     createdAt:{
         type: Date,
         default: Date.now
