@@ -9,13 +9,16 @@ const transactions= new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         require: true
     },
-    transactionsId:{
+    orderId:{
         type: String,
-        require:true
+        require: true,
+        unique: true
+    },
+    transactionsId:{
+        type: String
     },
     refrenceId:{
-        type: String,
-        require: true
+        type: String
     },
     amount:{
         type: Number,

@@ -97,9 +97,25 @@ route.get('/wallet', jwtauth, async function (req, res) {
     }
 });
 
+route.get('/walletById/:id', jwtauth, async function (req, res) {
+    if (!res.headersSent) {
+        let w = await wallet.findById(req.params.id).lean();
+        if (w) {
+            const u = await User.findById(w.user);
+            w['username'] = u.username;
+            if (w.KYCdoc) {
+                w.KYCdoc = fs.readFileSync(path.join(__dirname, '..', '..', '/docs/' + w.KYCdoc.filename), { encoding: 'base64' })
+            }
+            res.send(200, { WalletCreated: true, success: true, data: w })
+        } else {
+            res.send(200, { WalletCreated: false })
+        }
+    }
+});
+
 route.get('/walletRequest', jwtauth, async function (req, res) {
     if (!res.headersSent) {
-        let w = await wallet.find({ isActive: true, isAdminVerified: false }).lean();
+        let w = await wallet.find({ isActive: true }).lean();
         if (w) {
             if (w.length > 0) {
                 for (let i = 0; i < w.length; i++) {
@@ -137,9 +153,10 @@ route.post('/wallet/create', jwtauth, upload.single('KYCdoc'), function (req, re
         w.save().then(data => {
             console.log(data);
             sendOTP(data)
+            addHistory("Success","Wallet Created",data,req.user)
             res.send(200, { success: true, data: data, message: "wallet successfully created!" })
         }).catch(err => {
-            console.log(err);
+            console.log(err);-
             res.send(500, { success: false, message: err.message })
         })
     }
@@ -158,13 +175,15 @@ route.put('/wallet/update', jwtauth, upload.single('KYCdoc'), async function (re
             if (KYCdoc) {
                 data = { KYCdoc, KYCdocNumber, KYCdocType, mobile, user, isAdminVerified }
             }
-            wallet.findOneAndUpdate({ user: req.user }, data).then(response => {
-                console.log(response);
-                res.send(200, { success: true, data: response, message: "wallet successfully updated!" })
-            }).catch(err => {
+            try{
+            const updatedWallet=await wallet.findOneAndUpdate({ user: req.user }, data,{new: true})
+                console.log(updatedWallet);
+                addHistory("Success","Wallet Updated",w,req.user)
+                res.send(200, { success: true, data: updatedWallet, message: "wallet successfully updated!" })
+            }catch(err){
                 console.log(err);
                 res.send(500, { success: false, message: err.message })
-            })
+            }
         }
     }
 });
@@ -173,7 +192,7 @@ route.put('/wallet/verify/:id', jwtauth, adminAuth, async function (req, res) {
     if (!res.headersSent) {
         const w = await wallet.findById(req.params.id);
         if (w) {
-            wallet.findByIdAndUpdate(req.params.id, { isAdminVerified: true, isRejected: false, rejectNote: '' }).then(response => {
+            wallet.findByIdAndUpdate(req.params.id, { isAdminVerified: true, isRejected: false, rejectNote: '' },{new:true}).then(response => {
                 addHistory("Success","Admin verified wallet",w,req.user)
                 res.send(200, { success: true, data: response, message: "wallet successfully verified!" })
             }).catch(err => {
@@ -185,10 +204,12 @@ route.put('/wallet/verify/:id', jwtauth, adminAuth, async function (req, res) {
 });
 
 route.put('/wallet/reject/:id', jwtauth, adminAuth, async function (req, res) {
+    console.log(req.body)
     if (!res.headersSent) {
         const w = await wallet.findById(req.params.id);
         if (w) {
-            wallet.findByIdAndUpdate(req.params.id, { isAdminVerified: false, isRejected: true, rejectNote: req.body.message }).then(response => {
+            wallet.findByIdAndUpdate(req.params.id, { isAdminVerified: false, isRejected: true, rejectNote: req.body.message },{new:true}).then(response => {
+                addHistory("Rejected","Wallet rejected because of "+response.rejectNote,w,req.user)
                 res.send(200, { success: true, data: response, message: "wallet successfully rejected!" })
             }).catch(err => {
                 console.log(err);
@@ -224,7 +245,7 @@ route.post('/wallet/otpverify', jwtauth, async function (req, res) {
 route.get('/wallet/history/:id', jwtauth, async function (req, res) {
     if (!res.headersSent) {
         try {
-            const w = await walletHistory.find().lean();
+            const w = await walletHistory.find({wallet:req.params.id}).lean();
             if (w) {
                 res.send(200, { success: true, data: w })
             } else {

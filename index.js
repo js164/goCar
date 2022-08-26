@@ -32,6 +32,7 @@ app.use('/adminAuth',require('./routes/Auth/adminAuth'))
 app.use('/car',require('./routes/Admin/car'))
 app.use('/category',require('./routes/Admin/rate'))
 app.use('/profile',require('./routes/Profile/wallet'))
+app.use('/payment',require('./routes/Payment/paytm'))
 
 port=process.env.PORT || 5000
 const connectDB=require('./db')
