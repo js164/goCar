@@ -54,6 +54,24 @@ route.get('/id/:id', jwtauth, async function (req, res, next) {
 
 });
 
+route.get('/byId/:id', jwtauth, async function (req, res, next) {
+    if (!res.headersSent) {
+        try {
+            var car = await cars.findById(req.params.id);
+            console.log(car)
+            if(car && car.image){
+                car.image=fs.readFileSync(path.join(__dirname,'..','..', '/images/' + car.image.filename),{encoding: 'base64'})
+            }
+            res.send(200, { success: true, data: car })
+        }
+        catch (err) {
+            console.log(err);
+            res.send(500, { success: false, message: err.message })
+        }
+    }
+
+});
+
 route.post('/addCar', jwtauth, adminAuth,upload.single('image'),async function (req, res, next) {
     if (!res.headersSent) {
         const { name, category, carCompany, colour, registerNumber} = req.body;

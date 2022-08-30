@@ -29,6 +29,21 @@ const cars= new mongoose.Schema({
     image:{
         type: Object,
     },
+    isReady:{
+        type: Boolean,
+        default: true
+    },
+    isBooked:{
+        type: Boolean,
+        default: false
+    },
+    status:{
+        type: String,
+        default:"Active"
+    },
+    remarks:{
+        type:String
+    }
 })
 
 module.exports=mongoose.model('cars',cars)
