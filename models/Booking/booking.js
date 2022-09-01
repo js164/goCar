@@ -9,6 +9,15 @@ const booking= new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         require:true
     },
+    bookingId:{
+        type:String,
+        require:true
+    },
+    book_for:{
+        type:String,
+        default:'Me',
+        require:true
+    },
     name:{
         type:String,
         require:true
@@ -22,7 +31,7 @@ const booking= new mongoose.Schema({
         require:true
     },
     dropUpDateTime:{
-        type: String,
+        type: Date,
         require:true
     },
     estimateKm:{
@@ -32,6 +41,13 @@ const booking= new mongoose.Schema({
     estimatePrice:{
         type: Number,
         require: true
+    },
+    status:{
+        type: String,
+        default:"Active"
+    },
+    remarks:{
+        type:String
     }
 })
 

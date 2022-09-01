@@ -36,13 +36,6 @@ const cars= new mongoose.Schema({
     isBooked:{
         type: Boolean,
         default: false
-    },
-    status:{
-        type: String,
-        default:"Active"
-    },
-    remarks:{
-        type:String
     }
 })
 
