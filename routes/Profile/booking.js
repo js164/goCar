@@ -1,11 +1,50 @@
 const express = require('express')
 const route = express.Router()
 const booking = require('../../models/Booking/booking')
+const availiblity= require('../../models/Booking/availability')
 const cars = require('../../models/Cars/cars')
 const { jwtauth, adminAuth } = require('../../AuthMiddlewere')
 const path = require('path');
 const fs = require('fs');
 const generateUniqueId = require('generate-unique-id');
+
+route.get('/car/availiblity/:id',async function(req,res){
+    if (!res.headersSent) {
+        try{
+            const a= await availiblity.find({car:req.params.id})
+            res.send(200, { success: true, data: a })
+        }catch(err){
+            console.log(err)
+            res.send(500, { success: false, message: "Bad Request!" })
+        }
+    }
+})
+
+route.get('/car/byDateRange/:id/:sdate/:edate',async function(req,res){
+    if (!res.headersSent) {
+        try{
+            let sdate=new Date(req.params.sdate)
+            let edate=new Date(req.params.edate)
+            const a= await availiblity.find({car:req.params.id})
+            if(a){
+                for(let i=0;i<a.length;i++){
+                    if(a[i].date >=sdate && a[i].date <= edate){
+                        res.send(200, { success: true, available: false })
+                        return
+                    }
+                }
+                res.send(200, { success: true, available: true })
+            }
+            else{
+                res.send(200, { success: true, available: true })
+            }
+        }catch(err){
+            console.log(err)
+            res.send(500, { success: false, message: "Bad Request!" })
+        }
+    }
+})
+
 
 route.post('/create', jwtauth, async function (req, res) {
     if (!res.headersSent) {
@@ -17,6 +56,13 @@ route.post('/create', jwtauth, async function (req, res) {
         const b = new booking({ ...req.body, user: req.user, bookingId });
         b.save().then(data => {
             console.log(data);
+            let sdate=new Date(b.pickUpDateTime.setHours(0,0,0,0))
+            let edate=new Date(b.dropUpDateTime.setHours(23,59,59,59))
+            while(sdate<=edate){
+                const a= new availiblity({car:selectedCar._id,bookingId:b._id,date:sdate})
+                a.save()
+                sdate= new Date(sdate.getTime() + (1000*60*60*24))
+            }
             cars.findByIdAndUpdate(selectedCar._id, { isBooked: true, isReady: false });
             res.send(200, { success: true, data: data, message: "Booking successfully created!" })
         }).catch(err => {
